@@ -4,13 +4,14 @@
 class SQL:
     "SQL module"
 
-    def __init__(self, backend, **kwargs):
+    def __init__(self, backend, *args, **kwargs):
         if self.chooseBackend(backend):
-            self.connect(**kwargs)
+            self.connect(*args, **kwargs)
         else:
             print 'Backend not choosed.'
 
     def chooseBackend(self, backend='sqlite'):
+        self.backend = backend
         if backend == 'mysql':
             try:
                 self.__backed = __import__('MySQLdb')
@@ -37,13 +38,18 @@ class SQL:
         else:
             print "Backend not supported yet."
 
+    def connect(self, *args, **kwargs):
+        self.__db = self.__backed.connect(*args, **kwargs)
+        self.cursor = self.__db.cursor(self.__cursorclass)
 
-    def connect(self, **kwargs):
-        self.__db = self.backend.connect(**kwargs)
-        self.cursor = self.__db.cursor(cursorclass=self.__cursorclass)
+    @classmethod
+    def escape(self, string):
+        return string.replace(u"'", u"''")
 
     def executeQuery(self, query, action="select"):
         ##Add more debugging information
+        if not self.cursor:
+            return [False, 'Database not initialized.']
         c = self.cursor
         try:
             c.execute(query)
@@ -60,20 +66,20 @@ class SQL:
         fields = []
         values = []
         update = ''
-        for name in vars:
+        for name in vars.keys():
             if vars[name] != None:
-                fields.append(name)
-                values.append(unicode(vars[name]))
+                fields.append(self.escape(name))
+                values.append(self.escape(unicode(vars[name])))
         if len(upd) > 0:
             up = []
             for i in upd:
                 if vars.has_key(i) and vars[i] != None:
-                    up.append(u"%s = '%s'" % (i, vars[i]))
+                    up.append(u"%s = '%s'" % (self.escape(i), self.escape(vars[i])))
             if len(up) > 0:
                 update = u'ON DUPLICATE KEY UPDATE %s' % u', '.join(unicode(up))
         fields = u', '.join(fields)
-        values = u'", "'.join(values)
-        qw = u'INSERT INTO `%s` (%s) VALUES("%s") %s' % (tbl, fields, values, update)
+        values = u"', '".join(values)
+        qw = u"INSERT INTO `%s` (%s) VALUES('%s') %s" % (tbl, fields, values, update)
         return self.executeQuery(qw, 'insert')
 
     def find(self, tbl, value, column, *fields):
@@ -83,8 +89,7 @@ class SQL:
             fields.index('id')
         except:
             fields.append('id')
-        var = {}
-        var[column] = value
+        var = {column: value}
         res = self.getRecords(tbl, select=fields, limit=1, **var)
         return res
 
@@ -113,14 +118,13 @@ class SQL:
         qw = u'SELECT DISTINCT %s FROM `%s` %s %s %s %s' % (select,
                 tbl, QueryJoins, clause, order, limit)
         if vars.has_key('debug'):
-            return ['error', qw]
-        ret = self.executeQuery(qw)
-        return ret
+            return [False, qw]
+        return self.executeQuery(qw)
 
     def updateRecords(self, tbl, set={}, **vars):
         update = []
         for key in set.keys():
-            update.append(u"%s='%s'" % (key, set[key]))
+            update.append(u"%s='%s'" % (self.escape(key), self.escape(set[key])))
         update = u', '.join(update)
         clause = self.createClause(**vars)
         qw = u'UPDATE `%s` SET %s %s' % (tbl, update, clause)
@@ -135,10 +139,10 @@ class SQL:
                     v = vars[i]
                     cl = []
                     for j in v:
-                        cl.append(u"%s %s '%s'" % (i, WClauseOperator, j))
+                        cl.append(u"%s %s '%s'" % (self.escape(i), WClauseOperator, self.escape(j)))
                     wclause.append(u'(%s)' % ' OR '.join(cl))
                 else:
-                    wclause.append(u"%s %s '%s'" % (i, WClauseOperator, vars[i]))
+                    wclause.append(u"%s %s '%s'" % (self.escape(i), WClauseOperator, self.escape(vars[i])))
         if len(wclause):
             if And:
                 wclause = 'WHERE ' + ' AND '.join(wclause)
