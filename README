@@ -1,0 +1,7 @@
+Lightweight sql frontend.
+
+Write it later.
+
+
+>>> SQL().createClause(one='1', two=['2'], three=['3', '>'], four=[['4_1', '>', '4_2', '<'], 'AND', '4'], five=[[['%5_1_1', 'LIKE'], 'OR', ['5_1_3', 'NOT'], 'AND'], 'AND', ['5_2_1', '>', '5_2_2'], 'OR', '5_3', 'NOT'])
+    u"WHERE (four > '4_1' AND four < '4_2') AND four = '4' AND three > '3' AND ((five LIKE '%5_1_1') AND (five NOT '5_1_3')) AND (five > '5_2_1' OR five = '5_2_2') AND five NOT '5_3' AND two = '2' AND one = '1'"

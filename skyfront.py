@@ -6,7 +6,10 @@ class SQL:
 
     def __init__(self, backend, *args, **kwargs):
         if self.chooseBackend(backend):
-            self.connect(*args, **kwargs)
+            try:
+                self.connect(*args, **kwargs)
+            except Exception, e:
+                print 'Connection not made: %s' % e
         else:
             print 'Backend not choosed.'
 
@@ -131,18 +134,26 @@ class SQL:
         rows = self.executeQuery(qw)
         return rows
 
-    def createClause(self, And = True, WClauseOperator = '=', **vars):
+    def createClause(self, And = True, **vars):
+        def _l(lst, var):
+            cl = []
+            if len(lst) % 2:
+                lst.append('=')
+            for item in zip(*[lst[i::2] for i in range(2)]):
+                if type(item[0]) is list:
+                    if not item[1]:
+                        item[1] = 'OR'
+                    cl.append(u'(%s)' % (u' %s ' % item[1]).join(_l(item[0], var)))
+                else:
+                    cl.append(u"%s %s '%s'" % (self.escape(var), self.escape(item[1]), self.escape(item[0])))
+            return cl
         wclause = []
         for i in vars.keys():
             if vars[i]:
-                if type(vars[i]).__name__ == 'list':
-                    v = vars[i]
-                    cl = []
-                    for j in v:
-                        cl.append(u"%s %s '%s'" % (self.escape(i), WClauseOperator, self.escape(j)))
-                    wclause.append(u'(%s)' % ' OR '.join(cl))
+                if type(vars[i]) is list:
+                    wclause.extend(_l(vars[i], i))
                 else:
-                    wclause.append(u"%s %s '%s'" % (self.escape(i), WClauseOperator, self.escape(vars[i])))
+                    wclause.append(u"%s = '%s'" % (self.escape(i), self.escape(vars[i])))
         if len(wclause):
             if And:
                 wclause = 'WHERE ' + ' AND '.join(wclause)
