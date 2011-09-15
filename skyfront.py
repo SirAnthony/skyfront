@@ -85,6 +85,12 @@ class SQL:
         qw = u"INSERT INTO `%s` (%s) VALUES('%s') %s" % (tbl, fields, values, update)
         return self.executeQuery(qw, 'insert')
 
+    def delete(self, tbl, delete_all_records=False, **vars):
+        c = self.createClause(**vars)
+        if not c and not delete_all_records:
+            return [False, 'Please pass delete_all_records to make complete deletion.']
+        return self.executeQuery(u"DELETE FROM %s %s" % (tbl, c))
+
     def find(self, tbl, value, column, *fields):
         '''Usage: (table, find_value, find_column, return_columns). ID column added if not given'''
         fields = list(fields)
@@ -135,6 +141,8 @@ class SQL:
         return rows
 
     def createClause(self, And = True, **vars):
+        if not vars.keys():
+            return ''
         def _l(lst, var):
             cl = []
             if len(lst) % 2:
@@ -154,11 +162,8 @@ class SQL:
                     wclause.extend(_l(vars[i], i))
                 else:
                     wclause.append(u"%s = '%s'" % (self.escape(i), self.escape(vars[i])))
-        if len(wclause):
-            if And:
-                wclause = 'WHERE ' + ' AND '.join(wclause)
-            else:
-                wclause = 'WHERE ' + ' OR '.join(wclause)
+        if And:
+            wclause = 'WHERE ' + ' AND '.join(wclause)
         else:
-            wclause = ''
+            wclause = 'WHERE ' + ' OR '.join(wclause)
         return wclause
