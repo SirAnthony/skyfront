@@ -2,16 +2,18 @@
 # -*- coding: utf-8 -*-
 
 class SQL:
-    "SQL module"
+    "SQL front end."
 
-    def __init__(self, backend, *args, **kwargs):
-        if self.chooseBackend(backend):
+    def __init__(self, backend=None, *args, **kwargs):
+        if backend and self.chooseBackend(backend):
             try:
                 self.connect(*args, **kwargs)
+                self.ATTACHED = True
             except Exception, e:
                 print 'Connection not made: %s' % e
         else:
-            print 'Backend not choosed.'
+            print 'Backend not choosed. '
+            self.ATTACHED = False
 
     def chooseBackend(self, backend='sqlite'):
         self.backend = backend
@@ -47,12 +49,11 @@ class SQL:
 
     @classmethod
     def escape(self, string):
-        return string.replace(u"'", u"''")
+        return unicode(string).replace(u"'", u"''")
 
     def executeQuery(self, query, action="select"):
-        ##Add more debugging information
-        if not self.cursor:
-            return [False, 'Database not initialized.']
+        if not self.ATTACHED:
+            return query
         c = self.cursor
         try:
             c.execute(query)
@@ -66,6 +67,7 @@ class SQL:
             return [True, c.lastrowid]
 
     def insertNew(self, tbl, upd=[], **vars):
+        #TODO: upd - not right way
         fields = []
         values = []
         update = ''
@@ -73,7 +75,7 @@ class SQL:
             if vars[name] != None:
                 fields.append(self.escape(name))
                 values.append(self.escape(unicode(vars[name])))
-        if len(upd) > 0:
+        if upd and len(upd) > 0:
             up = []
             for i in upd:
                 if vars.has_key(i) and vars[i] != None:
@@ -99,17 +101,14 @@ class SQL:
         except:
             fields.append('id')
         var = {column: value}
-        res = self.getRecords(tbl, select=fields, limit=1, **var)
-        return res
+        return self.getRecords(tbl, select=fields, limit=1, **var)
 
-    def getCount(self, tbl, clause = None, **vars):
-        if not clause:
-            clause = self.createClause(**vars)
-        qw = 'SELECT COUNT(*) FROM `%s` %s' % (tbl, clause)
+    def getCount(self, tbl, **vars):
+        qw = 'SELECT COUNT(*) FROM `%s` %s' % (tbl, self.createClause(**vars))
         ret = self.executeQuery(qw)
-        if ret[0]:
-            ret[1] = ret[1][0].values()[0]
-        return ret;
+        if type(ret) == list and ret[0] and self.ATTACHED:
+            ret[1] = ret[1][0][0]
+        return ret
 
     def getRecords(self, tbl, select = [], QueryJoins = '', limit = 20,
                               limstart = 0, order='', **vars):
@@ -126,8 +125,6 @@ class SQL:
         clause = self.createClause(**vars)
         qw = u'SELECT DISTINCT %s FROM `%s` %s %s %s %s' % (select,
                 tbl, QueryJoins, clause, order, limit)
-        if vars.has_key('debug'):
-            return [False, qw]
         return self.executeQuery(qw)
 
     def updateRecords(self, tbl, set={}, **vars):
@@ -137,10 +134,9 @@ class SQL:
         update = u', '.join(update)
         clause = self.createClause(**vars)
         qw = u'UPDATE `%s` SET %s %s' % (tbl, update, clause)
-        rows = self.executeQuery(qw)
-        return rows
+        return self.executeQuery(qw)
 
-    def createClause(self, And = True, **vars):
+    def createClause(self, __skyfront_and=True, **vars):
         if not vars.keys():
             return ''
         def _l(lst, var):
@@ -162,7 +158,7 @@ class SQL:
                     wclause.extend(_l(vars[i], i))
                 else:
                     wclause.append(u"%s = '%s'" % (self.escape(i), self.escape(vars[i])))
-        if And:
+        if __skyfront_and:
             wclause = 'WHERE ' + ' AND '.join(wclause)
         else:
             wclause = 'WHERE ' + ' OR '.join(wclause)
