@@ -4,6 +4,8 @@
 class SQL:
     "SQL front end."
 
+    version = '0.9'
+
     def __init__(self, backend=None, *args, **kwargs):
         if backend and self.chooseBackend(backend):
             try:
