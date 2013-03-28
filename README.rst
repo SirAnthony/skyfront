@@ -20,10 +20,10 @@ argument and database parameters as others. All database arguments
 directly passed to your backend **connect** method. Only sqlite and mysql
 backend are supported yet.
 
->>> import skyfront
->>> sql = skyfront.SQL('sqlite', 'test.sqlite')
+>>> from skyfront import SkyFront
+>>> sql = SkyFront('sqlite', 'test.sqlite')
 
-.. _executeQuery:
+.. _executequery:
 
 Query execution
 -------------------------
@@ -44,7 +44,7 @@ functions returns result of this function unless otherwise noted.
                             text VARCHAR NOT NULL)""")
 [True, []]
 
-.. _insertNew:
+.. _insertnew:
 
 Records insertion
 -------------------------
@@ -67,7 +67,7 @@ value is field value wich needs to be added to database.
 >>> sql.insertNew('test', None, name='California', title='CA', text='Eureka')
 [True, 5]
 
-.. _getRecords:
+.. _getrecords:
 
 Records selection
 -------------------------
@@ -97,13 +97,13 @@ All other arguments will be passed to createClause_ function.
 >>> sql.getRecords('test', ['name', 'title'], limit=2, id=[2, '>'])
 [True, [(u'Arizona', u'AZ'), (u'Arkansas', u'AR')]]
 
-.. _updateRecords:
+.. _updaterecords:
 
 Records updating
 -------------------------
 
 For updating you can use **updateRecords** method.
-First argument of this function is  database table name.
+First argument of this function is database table name.
 Second argument is dictionary with keys - field names and values -
 data which must be set. Other arguments will be passed to
 createClause_ function.
@@ -128,7 +128,7 @@ All other arguments will be passed to createClause_ function.
 >>> sql.getRecords('test', id=5)
 [True, []]
 
-.. _getCount:
+.. _getcount:
 
 Counting records
 -------------------------
@@ -145,20 +145,20 @@ All other arguments will be passed to createClause_ function.
 Query generator
 =========================
 
-Just initialize SQL class without arguments. Or set *ATTACHED*
-property of class to False. When *ATTACHED* class property is False
+Just initialize SQL class without arguments. Or call **deattach**
+method of instance. When *ATTACHED* class property is False
 executeQuery_ method returns query string without execution, so you
 can get queries from functions noted above.
 
->>> sql.ATTACHED = False
+>>> sql.deattach()
 >>> sql.insertNew('test', None, name='Alabama', title='AL', text='Audemus jura nostra defendere')
 u"INSERT INTO `test` (text, name, title) VALUES('Audemus jura nostra defendere', 'Alabama', 'AL') "
 >>> sql.getRecords('test')
-u'SELECT DISTINCT * FROM `test`    LIMIT 0,20'
+u'SELECT DISTINCT * FROM `test`'
 >>> sql.getRecords('test', ['name', 'title'], limit=3, limstart=2, order='text')
-u'SELECT DISTINCT name,title FROM `test`   ORDER BY text LIMIT 2,3'
+u'SELECT DISTINCT name,title FROM `test` ORDER BY text LIMIT 2,3'
 >>> sql.getRecords('test', ['name', 'title'], limit=2, id=[2, '>'])
-u"SELECT DISTINCT name,title FROM `test`  WHERE id > '2'  LIMIT 0,2"
+u"SELECT DISTINCT name,title FROM `test` WHERE id > '2' LIMIT 0,2"
 >>> sql.updateRecords('test', {'name': 'Connecticut', 'title': 'CT',
                      'text': 'Qui transtulit sustinet'}, id=5)
 u"UPDATE `test` SET text='Qui transtulit sustinet', name='Connecticut', title='CT' WHERE id = '5'"
@@ -167,10 +167,10 @@ u"DELETE FROM test WHERE id = '5'"
 >>> sql.getCount('test', id=[2, '>'])
 u"SELECT COUNT(*) FROM `test` WHERE id > '2'"
 
+.. _createclause:
+
 Additional functions
 -------------------------
-
-.. _createClause:
 
 **createClause** function provides simple interface to create clause
 strings. It returns string regardless of *ATTACHED* class property.
@@ -199,7 +199,7 @@ u"WHERE (one LIKE '%3') AND (one NOT '2')"
 You can change global summarise symbol from `AND` to `OR` by passing
 False as first argument.
 
->>> sql.createClause(one=[1, '>', 40, '<'])
+>>> sql.createClause(False, one=[1, '>', 40, '<'])
 u"WHERE one > '1' OR one < '40'"
 
 Complex example (it is just example of the possibilities, please do not
