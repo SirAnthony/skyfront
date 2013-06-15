@@ -207,7 +207,7 @@ limit and limstart specify 'LIMIT' parameter.
         return self.executeQuery(qw)
 
 
-    def createClause(self, __skyfront_and=True, **vars):
+    def createClause(self, _skyfront_and=True, **vars):
         """Creates 'WHERE' clause"""
         if not vars.keys():
             return ''
@@ -233,7 +233,7 @@ limit and limstart specify 'LIMIT' parameter.
                 else:
                     wclause.append(u"{0} = '{1}'".format(self.escape(key), self.escape(value)))
 
-        if __skyfront_and:
+        if _skyfront_and:
             wclause = 'WHERE ' + ' AND '.join(wclause)
         else:
             wclause = 'WHERE ' + ' OR '.join(wclause)
