@@ -15,7 +15,6 @@ class SkyFront:
         if backend:
             self.attach(backend, *args, **kwargs)
 
-
     def chooseBackend(self, backend='sqlite'):
         """Setup sql backend for work."""
         self.backend = backend
@@ -26,11 +25,11 @@ class SkyFront:
             except ImportError, e:
                 print e
             else:
-                if not vars.has_key("db"):
+                if "db" not in vars:
                     print "Database not specified"
-                elif not vars.has_key("user"):
+                elif "user" not in vars:
                     print "Database user name not specified"
-                elif not vars.has_key("passwd"):
+                elif "passwd" not in vars:
                     print "Database user password not specified"
                 else:
                     return True
@@ -45,11 +44,9 @@ class SkyFront:
         else:
             print "Backend not supported yet."
 
-
     def connect(self, *args, **kwargs):
         self.__db = self.__backend.connect(*args, **kwargs)
         self.cursor = self.__db.cursor(self.__cursorclass)
-
 
     def attach(self, backend=None, *args, **kwargs):
         if self.chooseBackend(backend):
@@ -62,7 +59,6 @@ class SkyFront:
             print 'Backend not choosed.'
             self.ATTACHED = False
 
-
     def deattach(self):
         """Close connection to database and set generator mode."""
         if self.backend and self.__db:
@@ -73,11 +69,9 @@ class SkyFront:
         self.cursor = None
         self.ATTACHED = False
 
-
     @classmethod
     def escape(self, string):
         return self.forceUnicode(string).replace(u"'", u"''")
-
 
     @classmethod
     def forceUnicode(self, s, encoding='utf-8'):
@@ -91,7 +85,6 @@ class SkyFront:
         elif not isinstance(s, unicode):
             s = s.decode(encoding, 'strict')
         return s
-
 
     def executeQuery(self, query, action="select"):
         """Executes query string.
@@ -117,7 +110,6 @@ string will be returned.
         if action == "insert":
             return [True, c.lastrowid]
 
-
     def insertNew(self, tbl, __update=[], **vars):
         """Creates 'INSERT' query.
 If second non-keyword argument passed, it will be interprited as list
@@ -126,33 +118,33 @@ of fields which should be updated on dublicate key.
         fields = []
         values = []
         update = ''
+        escape = self.escape
         for name in vars.keys():
-            if vars[name] != None:
-                fields.append(self.escape(name))
-                values.append(self.escape(vars[name]))
+            if vars[name] is not None:
+                fields.append(escape(name))
+                values.append(escape(vars[name]))
         if __update and len(__update) > 0:
-            up = [
-                "{0} = '{1}'".format(self.escape(name), self.escape(vars[name])) \
-                for name in __update if vars.get(name, None) is not None]
+            up = ["{0} = '{1}'".format(escape(name), escape(vars[name]))
+                  for name in __update if vars.get(name, None) is not None]
             if len(up) > 0:
-                update = 'ON DUPLICATE KEY UPDATE {0}'.format(', '.join(self.forceUnicode(up)))
+                update = ', '.join(self.forceUnicode(up))
+                update = 'ON DUPLICATE KEY UPDATE {0}'.format(update)
         fields = ', '.join(fields)
         values = "', '".join(values)
-        qw = ' '.join(filter(None, [
-                "INSERT INTO `{0}` ({1}) VALUES('{2}')".format(
-                    tbl, fields, values), update]))
+        insert = "INSERT INTO `{0}` ({1}) VALUES('{2}')".format(tbl, fields,
+                                                                values)
+        qw = ' '.join(filter(None, [insert, update]))
         return self.executeQuery(qw, 'insert')
-
 
     def delete(self, tbl, delete_all_records=False, **vars):
         """Creates 'DELETE FROM' query
 For deleting all records user must specify `delete_all_records` parameter
 """
         c = self.createClause(**vars)
-        if not c and not delete_all_records is True:
-            return [False, 'Please pass delete_all_records to make complete deletion.']
+        if not c and not delete_all_records:
+            return [False, 'Please pass delete_all_records to make'
+                    'complete deletion.']
         return self.executeQuery("DELETE FROM {0} {1}".format(tbl, c))
-
 
     def find(self, tbl, value, column, *fields):
         """Finds certain record in database. Generates 'SELECT' query with limit 1.
@@ -167,23 +159,21 @@ Usage: (table, find_value, find_column, return_columns).
         var = {column: value}
         return self.getRecords(tbl, select=fields, limit=1, **var)
 
-
     def getCount(self, tbl, **vars):
         """Generates SELECT COUNT(*) query."""
-        qw = 'SELECT COUNT(*) FROM `{0}` {1}'.format(tbl, self.createClause(**vars))
+        clause = self.createClause(**vars)
+        qw = 'SELECT COUNT(*) FROM `{0}` {1}'.format(tbl, clause)
         ret = self.executeQuery(qw)
         if type(ret) == list and ret[0] and self.ATTACHED:
             ret[1] = ret[1][0][0]
         return ret
 
-
     def getRecords(self, tbl, select=[], QueryJoins='', limit=0,
-                              limstart=0, order='', **vars):
+                   limstart=0, order='', **vars):
         """Generates 'SELECT FROM' query.
 If second keyword argument not specified, mask `*` will be used.
 limit and limstart specify 'LIMIT' parameter.
 """
-
         select = ','.join(select) if len(select) else '*'
         limit = 'LIMIT {0},{1}'.format(limstart, limit) if limit else ''
         order = 'ORDER BY {0}'.format(order) if order else ''
@@ -194,23 +184,22 @@ limit and limstart specify 'LIMIT' parameter.
             QueryJoins, clause, order, limit]))
         return self.executeQuery(qw)
 
-
     def updateRecords(self, tbl, __skyfront_set={}, **vars):
         """Generates 'UPDATE SET' query."""
         update = []
         for key in __skyfront_set.keys():
             update.append(u"{0}='{1}'".format(self.escape(key),
-                            self.escape(__skyfront_set[key])))
+                          self.escape(__skyfront_set[key])))
         update = u', '.join(update)
         clause = self.createClause(**vars)
         qw = u'UPDATE `{0}` SET {1} {2}'.format(tbl, update, clause)
         return self.executeQuery(qw)
 
-
     def createClause(self, _skyfront_and=True, **vars):
         """Creates 'WHERE' clause"""
         if not vars.keys():
             return ''
+
         def _l(lst, var):
             cl = []
             if len(lst) % 2:
@@ -219,10 +208,11 @@ limit and limstart specify 'LIMIT' parameter.
                 if type(array) is list:
                     if not op:
                         op = 'OR'
-                    cl.append(u'({0})'.format(u' {0} '.format(op).join(_l(array, var))))
+                    subexp = u' {0} '.format(op).join(_l(array, var))
+                    cl.append(u'({0})'.format(subexp))
                 else:
                     cl.append(u"{0} {1} '{2}'".format(self.escape(var),
-                            self.escape(op), self.escape(array)))
+                              self.escape(op), self.escape(array)))
             return cl
 
         wclause = []
@@ -231,7 +221,8 @@ limit and limstart specify 'LIMIT' parameter.
                 if type(value) is list:
                     wclause.extend(_l(value, key))
                 else:
-                    wclause.append(u"{0} = '{1}'".format(self.escape(key), self.escape(value)))
+                    wclause.append(u"{0} = '{1}'".format(self.escape(key),
+                                   self.escape(value)))
 
         if _skyfront_and:
             wclause = 'WHERE ' + ' AND '.join(wclause)

@@ -29,12 +29,12 @@ class TestDatabase(unittest.TestCase):
 class TestDatabaseNoFixture(TestDatabase):
 
     def test_execute(self):
-        self.assertEquals(self.sql.executeQuery(
-        '''CREATE TABLE IF NOT EXISTS `test2` (
+        query = '''CREATE TABLE IF NOT EXISTS `test2` (
                     id INTEGER PRIMARY KEY autoincrement,
                     name VARCHAR UNIQUE,
                     title VARCHAR NOT NULL,
-                    text VARCHAR NOT NULL)'''), [True, []])
+                    text VARCHAR NOT NULL)'''
+        self.assertEquals(self.sql.executeQuery(query), [True, []])
 
     def test_insertion(self):
         self.assertEquals(self.sql.insertNew('test', None, name='Alabama',
@@ -53,14 +53,16 @@ class TestDatabaseFixture(TestDatabase):
 
     def setUp(self):
         super(TestDatabaseFixture, self).setUp()
-        self.sql.insertNew('test', None, name='Alabama', title='AL', text='Audemus jura nostra defendere')
-        self.sql.insertNew('test', None, name='Alaska', title='AK', text='North to the future')
+        self.sql.insertNew('test', None, name='Alabama', title='AL',
+                           text='Audemus jura nostra defendere')
+        self.sql.insertNew('test', None, name='Alaska', title='AK',
+                           text='North to the future')
         self.sql.insertNew('test', None, name='Arizona', title='AZ', text='Ditat Deus')
         self.sql.insertNew('test', None, name='Arkansas', title='AR', text='Regnat populus')
         self.sql.insertNew('test', None, name='California', title='CA', text='Eureka')
 
     def test_select(self):
-        self.assertEquals(self.sql.getRecords('test'),[True,
+        self.assertEquals(self.sql.getRecords('test'), [True,
             [(1, u'Alabama', u'AL', u'Audemus jura nostra defendere'),
             (2, u'Alaska', u'AK', u'North to the future'),
             (3, u'Arizona', u'AZ', u'Ditat Deus'),
@@ -86,7 +88,6 @@ class TestDatabaseFixture(TestDatabase):
     def test_count(self):
         self.assertEquals(self.sql.getCount('test'), [True, 5])
         self.assertEquals(self.sql.getCount('test', id=[2, '>']), [True, 3])
-
 
 
 class TestGenerator(unittest.TestCase):
