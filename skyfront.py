@@ -131,8 +131,8 @@ of fields which should be updated on dublicate key.
                 update = 'ON DUPLICATE KEY UPDATE {0}'.format(update)
         fields = ', '.join(fields)
         values = "', '".join(values)
-        insert = "INSERT INTO `{0}` ({1}) VALUES('{2}')".format(tbl, fields,
-                                                                values)
+        insert = self.forceUnicode("INSERT INTO `{0}` ({1}) VALUES('{2}')")\
+            .format(tbl, fields, self.forceUnicode(values))
         qw = ' '.join(filter(None, [insert, update]))
         return self.executeQuery(qw, 'insert')
 
